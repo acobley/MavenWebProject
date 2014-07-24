@@ -6,21 +6,49 @@
 
 package uk.ac.dundee.computing.aec.servlets;
 
+import uk.ac.dundee.computing.aec.libs.*;
+
+
+import com.datastax.driver.core.*;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-
 /**
  *
  * @author andycobley
  */
 @WebServlet(name = "Test", urlPatterns = {"/Test"})
 public class Test extends HttpServlet {
+     Cluster cluster=null;
+     Session session=null;
+     PreparedStatement SelectStatement;
+     public void init(ServletConfig config) throws ServletException {
+		// TODO Auto-generated method stub
+        //cluster = Cluster.builder().addContactPoint("192.168.2.10").build(); //vagrant cassandra cluster
+        try {
+            cluster = Cluster.builder().addContactPoint("192.168.2.10").build(); //vagrant cassandra cluster
+            session = cluster.connect();
+        } catch (NoHostAvailableException et) {
+            try {
+                cluster = Cluster.builder().addContactPoint("127.0.0.1").build(); //localhost
+                session = cluster.connect();
+            } catch (NoHostAvailableException et1) {
+                //can't get to a cassandra cluster bug out
+                return;
+
+            }
+        }
+        Keyspaces kp = new Keyspaces();
+        kp.SetUpKeySpaces(cluster);
+        SelectStatement=session.prepare("select * from mzMLKeyspace.mzMLTemp where name= ? ;");
+ 
+    }
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -35,15 +63,29 @@ public class Test extends HttpServlet {
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
+        ResultSet rs = null;
         try {
             /* TODO output your page here. You may use following sample code. */
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Servlet Test</title>");            
+            out.println("<title>Servlet Test</title>");
             out.println("</head>");
             out.println("<body>");
             out.println("<h1>Servlet Test at " + request.getContextPath() + "</h1>");
+            BoundStatement boundStatement = new BoundStatement(SelectStatement);
+            String xmlFile = "561L1AIL00.mzML";
+            rs = session.execute(boundStatement.bind(xmlFile));
+            out.println("<ul>");
+            if (!rs.isExhausted()) {
+                Row rr = rs.one();
+                String mzArray = rr.getString("mzArray");
+                String intensityArray = rr.getString("intensityArray");
+                String name = rr.getString("name");
+                int count = rr.getInt("scan");
+                out.println("<li>" + name + "&nbsp;" + count);
+            }
+            out.println("</ul>");
             out.println("</body>");
             out.println("</html>");
         } finally {
