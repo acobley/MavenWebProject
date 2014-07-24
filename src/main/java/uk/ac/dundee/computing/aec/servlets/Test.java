@@ -34,6 +34,7 @@ public class Test extends HttpServlet {
         try {
             cluster = Cluster.builder().addContactPoint("192.168.2.10").build(); //vagrant cassandra cluster
             session = cluster.connect();
+            
         } catch (NoHostAvailableException et) {
             try {
                 cluster = Cluster.builder().addContactPoint("127.0.0.1").build(); //localhost
@@ -46,7 +47,7 @@ public class Test extends HttpServlet {
         }
         Keyspaces kp = new Keyspaces();
         kp.SetUpKeySpaces(cluster);
-        SelectStatement=session.prepare("select * from mzMLKeyspace.mzMLTemp where name= ? ;");
+        SelectStatement=session.prepare("select * from mzMLKeyspace.mzMLTemp ;");
  
     }
 
@@ -74,8 +75,8 @@ public class Test extends HttpServlet {
             out.println("<body>");
             out.println("<h1>Servlet Test at " + request.getContextPath() + "</h1>");
             BoundStatement boundStatement = new BoundStatement(SelectStatement);
-            String xmlFile = "561L1AIL00.mzML";
-            rs = session.execute(boundStatement.bind(xmlFile));
+            
+            rs = session.execute(boundStatement.bind());
             out.println("<ul>");
             if (!rs.isExhausted()) {
                 Row rr = rs.one();
@@ -83,7 +84,7 @@ public class Test extends HttpServlet {
                 String intensityArray = rr.getString("intensityArray");
                 String name = rr.getString("name");
                 int count = rr.getInt("scan");
-                out.println("<li>" + name + "&nbsp;" + count);
+                out.println("<li>" + name + "&nbsp;" + count+"</li>");
             }
             out.println("</ul>");
             out.println("</body>");
